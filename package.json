@@ -23,6 +23,7 @@
     "url": "https://github.com/Sensorica/pullum-cavea/issues"
   },
   "dependencies": {
-    "eris-contracts": "^0.13.3"
+    "eris-contracts": "^0.13.3",
+    "nfc": "^0.3.3"
   }
 }
