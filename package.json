@@ -24,6 +24,6 @@
   },
   "dependencies": {
     "eris-contracts": "^0.13.3",
-    "nfc": "^0.3.3"
+    "nfc": "git://github.com/shuangjj/node-nfc.git"
   }
 }
