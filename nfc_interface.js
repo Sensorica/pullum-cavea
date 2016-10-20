@@ -6,7 +6,7 @@ var nfc  = require('./node_modules/nfc/index').nfc
   , http = require('http')
   ;
 
-var options = {
+var http_options = {
     host: "45.55.67.176", // simulates blockchain rpc service IP
     port: 80, // simulates blockchain rpc service port
     //path: "/", // it could be anything
@@ -22,24 +22,51 @@ var deviceID
 //  , old_uid = ''
   ;
 
-function add_uid(uid) {
-  fs.writeFile(auth_path+uid, 'default perms', function (err) {
-    if (err) return console.log(err);
-        console.log("Added UID:", uid);
-  });
-  var req = http.get(options, function(res) {
-     res.setEncoding("utf8"); 
-     res.on("data", function(data) {
+function send_http_req(action, uid, perms, cb) {
+  var received="";
+  http_options['path'] = '/'+action+'?uid='+uid+'&perms='+perms;
+  console.log(http_options);
+  var req = http.get(http_options, function(res) {
+    res.setEncoding("utf8");  //to emit events as strings
+    res.on("data", function(data) {
         received=data;
-        console.log("Received from Blockchain:", received);
-     }); 
+        cb(null, received);
+    }); 
+  });
+  req.on("error", function(err, msg) {
+    cb(err, msg);
+  });
+  req.end();
+}
+
+function add_uid(uid, perms) {
+  //Add user to the blockchain using its uid and permissions
+  send_http_req("add", uid, perms, function(err, result) {;
+    if (!err) 
+        console.log("blockchain operation result:", result);
+    else {
+        console.log("blockchain error:", err);
+        //Use local DB?
+    }
+  });
+  fs.writeFile(auth_path+uid, perms, function (err) {
+    if (err) return console.log(err);
+    else console.log("Added UID:", uid);
   });
 }
 
 function delete_uid(uid) {
+  send_http_req("del", uid, 0, function(err, result) {;
+    if (!err) 
+        console.log("blockchain operation result:", result);
+    else {
+        console.log("blockchain error:", err);
+        //Use local DB?
+    }
+  });
   fs.unlink(auth_path+uid, function(err) {
     if (err) return console.error(err);
-    console.log("UID deleted:", uid);
+    else console.log("UID deleted:", uid);
   }); 
 }
 
@@ -54,7 +81,6 @@ function read(deviceID) {
   var nowTime = Date.now();
   uid=tag.uid;
   console.log("\n============CARD UID:", uid);
-  //console.log("============old CARD UID:",old_uid);
   go_fwd = (nowTime > oldTime + 1000); //wait 1 second to avoid double tap 
   oldTime=nowTime;
   if (go_fwd) {
@@ -74,9 +100,11 @@ function read(deviceID) {
     });
     
     if (program_mode && (uid != master_uid)){ 
+    //if (program_mode ){ 
+        var perms=1; //simple access
         fs.exists(auth_path+uid, function(exists) {
             if (exists) delete_uid(uid)
-	        else add_uid(uid);
+	        else add_uid(uid, perms);
         });
         
     }
