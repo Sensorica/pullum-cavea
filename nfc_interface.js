@@ -6,12 +6,15 @@ var nfc  = require('./node_modules/nfc/index').nfc
   , http = require('http')
   ;
 
-var http_options = {
-    host: "45.55.67.176", // simulates blockchain rpc service IP
-    port: 80, // simulates blockchain rpc service port
-    //path: "/", // it could be anything
-    //method: "GET", // HTTP method
+var http_options = { //put it in command line argsv
+    host: "10.0.20.99", // simulates blockchain rpc service IP
+    port: 8337 // simulates blockchain rpc service port
+    //method: "GET", // default is GET
 };
+
+//if (process.argv[2] != "") http_options['host'] = process.argv[2];
+
+
 
 var deviceID
   , auth_path = './auth_card/'
@@ -19,12 +22,14 @@ var deviceID
   , program_mode=false
   , go_fwd = true
   , oldTime = Date.now()
-//  , old_uid = ''
+  , master_uid = ''
   ;
 
-function send_http_req(action, uid, perms, cb) {
+function send_http_req(action, orig_uid, perms, cb) {
   var received="";
-  http_options['path'] = '/'+action+'?uid='+uid+'&perms='+perms;
+  var uid=orig_uid.replace(/:/g, "");
+  var m_uid=master_uid.replace(/:/g, "");
+  http_options['path'] = '/'+action+'?uid='+uid+'&m_uid='+m_uid+'&perms='+perms;
   console.log(http_options);
   var req = http.get(http_options, function(res) {
     res.setEncoding("utf8");  //to emit events as strings
@@ -41,12 +46,11 @@ function send_http_req(action, uid, perms, cb) {
 
 function add_uid(uid, perms) {
   //Add user to the blockchain using its uid and permissions
-  send_http_req("add", uid, perms, function(err, result) {;
+  send_http_req("adduser", uid, perms, function(err, result) {;
     if (!err) 
         console.log("blockchain operation result:", result);
     else {
         console.log("blockchain error:", err);
-        //Use local DB?
     }
   });
   fs.writeFile(auth_path+uid, perms, function (err) {
@@ -56,12 +60,11 @@ function add_uid(uid, perms) {
 }
 
 function delete_uid(uid) {
-  send_http_req("del", uid, 0, function(err, result) {;
+  send_http_req("deluser", uid, 0, function(err, result) {;
     if (!err) 
         console.log("blockchain operation result:", result);
     else {
         console.log("blockchain error:", err);
-        //Use local DB?
     }
   });
   fs.unlink(auth_path+uid, function(err) {
@@ -70,7 +73,20 @@ function delete_uid(uid) {
   }); 
 }
 
-function modify_uid_permissions(uid, perms) {
+function get_perms(uid)  {
+  console.log("Im in get_perms:", uid);
+  send_http_req("getperms", uid, 0, function(err, result) {;
+    if (!err) { 
+        console.log("blockchain operation result:", result);
+        return result;
+            
+    }
+    else {
+        console.log("blockchain error:", err);
+        return -1;
+    }
+  });
+ 
 }
 
 function read(deviceID) {
@@ -80,37 +96,45 @@ function read(deviceID) {
   nfcdev.on('read', function(tag) {
   var nowTime = Date.now();
   uid=tag.uid;
-  console.log("\n============CARD UID:", uid);
-  go_fwd = (nowTime > oldTime + 1000); //wait 1 second to avoid double tap 
-  oldTime=nowTime;
+  //console.log("\n============CARD UID:", uid);
+  //console.log('old:',oldTime);
+  //console.log('now:',nowTime);
+  go_fwd = (nowTime > oldTime +5000); //wait 1 second to avoid double tap 
   if (go_fwd) {
-    fs.exists(master_path+uid, function(exists) { //master card exists
+    oldTime=nowTime;
+  //if (true) {
+    exists = (get_perms(uid) == 127);
+    //fs.exists(master_path+uid, function(exists) { //master card exists
         if (exists) {
 	        master_uid=uid;
 	        program_mode=!program_mode;
             if (program_mode) {
+                m_uid= uid;
 	   	    //Set led to yellow 
     	        console.log("Program mode enabled, Master:", uid);
 	        }
             else {
+                m_uid='';
 	   	    //Set led to blinking (normal mode)
     	        console.log("Program mode disabled, Master:", uid);
             }
 	    }
-    });
+    //});
     
     if (program_mode && (uid != master_uid)){ 
     //if (program_mode ){ 
         var perms=1; //simple access
-        fs.exists(auth_path+uid, function(exists) {
+        exists = (get_perms(uid) == 1); 
+        //fs.exists(auth_path+uid, function(exists) {
             if (exists) delete_uid(uid)
 	        else add_uid(uid, perms);
-        });
+        //});
         
     }
 
     if (!program_mode) {
-        fs.exists(auth_path+uid, function(exists) {
+        exists = (get_perms(uid) == 1); 
+        //fs.exists(auth_path+uid, function(exists) { //extend to include query to the blockchain
             if (exists) {
 	        //Set led to green and unlock
 	            console.log("Access granted to UID:", uid);	
@@ -119,11 +143,11 @@ function read(deviceID) {
 	            console.log("Not valid for access UID:", uid);	
 	            //Set led to red
 	        }
-        });
+        //});
     }
   }//only do all of the above if there is no double tap
   else { 
-    console.log("Ignoring consecutive tap for UID:", uid);
+    //console.log("Ignoring consecutive tap for UID:", uid);
   } 
   //uid=tag.uid;old_uid=uid;
 
