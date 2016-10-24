@@ -9,12 +9,9 @@ var nfc  = require('./node_modules/nfc/index').nfc
 var http_options = { //put it in command line argsv
     host: "10.0.20.99", // simulates blockchain rpc service IP
     port: 8337 // simulates blockchain rpc service port
-    //method: "GET", // default is GET
 };
 
-//if (process.argv[2] != "") http_options['host'] = process.argv[2];
-
-
+if (process.argv[2] != "") http_options['host'] = process.argv[2];
 
 var deviceID
   , auth_path = './auth_card/'
@@ -56,10 +53,8 @@ function read(deviceID) {
   uid=tag.uid;
   //console.log("\n============CARD UID:", uid);
   
-  go_fwd = (nowTime > oldTime + 2000); //wait 1 second to avoid double tap 
-  if (go_fwd) {
+  if (nowTime > oldTime + 1000) { //wait 1 second to avoid double tap
     oldTime=nowTime;
-    //console.log("First get permissions for:", uid);
     send_http_req("getperms", uid, 0, function (err, result) { 
         permissions = result;
         //console.log("perms:", permissions);
@@ -82,11 +77,9 @@ function read(deviceID) {
             exists = (permissions == 1); 
             if (exists) 
                 send_http_req("deluser", uid, 0, function (err, result) { 
-                //delete_uid(uid, function (result) {
     	            console.log("UID deleted:", result);
                 });
-	        else //add_uid(uid, 1, function (result)
-                send_http_req("adduser", uid, 1, function (err, result) { 
+	        else send_http_req("adduser", uid, 1, function (err, result) { 
     	            console.log("UID added:", result);
                 });//1= basic access permissions
         
@@ -109,7 +102,6 @@ function read(deviceID) {
   } 
 
   }); //end of read event
-
 
   nfcdev.on('error', function(err) {
     console.log(util.inspect(err, { depth: null }));
