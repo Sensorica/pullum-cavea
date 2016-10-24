@@ -19,7 +19,7 @@ contract nfc_simple {
      owner_addr = msg.sender;
   }
 
-  function add_user(bytes32 uid,  bytes32 m_uid, int perm) returns (int){
+  function add_user(bytes32 uid, bytes32 m_uid, int perm) returns (int){
     if (! users[uid].exists) { 
         users[uid].exists = true;
         users[uid].master_uid = m_uid;
@@ -42,7 +42,7 @@ contract nfc_simple {
       
   }
   
-  function modify_perms(bytes32 uid,  bytes32 m_uid, int perm) returns (int){
+  function modify_perms(bytes32 uid, bytes32 m_uid, int perm) returns (int){
     if (users[uid].exists)
         if (users[uid].master_uid == m_uid) { 
             users[uid].perms = perm;
@@ -60,6 +60,14 @@ contract nfc_simple {
       } 
       else return -1;
       
+  }
+
+  function get_master(bytes32 uid) returns (bytes32){
+    if (users[uid].exists) { 
+        return users[uid].master_uid;
+    }
+    else return -1;
+
   }
 
   function remove() {

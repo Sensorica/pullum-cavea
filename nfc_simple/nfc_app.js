@@ -31,11 +31,12 @@ server = http.createServer(function (request, response) {
           response.statusCode = 404;
           response.write("404".toString());
          } else {
+          console.log('200:'+result);
           response.statusCode = 200;
           response.setHeader('Content-Type', 'application/json');
-          response.write(result);
+          response.write(result.toString());
          }
-         response.end('\n');
+         //response.end('\n');
   }    
 
   var parsedURL = url.parse(request.url, true);
@@ -48,8 +49,6 @@ server = http.createServer(function (request, response) {
   if (request.method=='GET') {
    console.log("Query:", query);
    console.log("Command:", path);
-   console.log("uid:", uid);
-   console.log("m_uid:", m_uid);
 
    switch (path) {
     case '/adduser':
@@ -68,10 +67,15 @@ server = http.createServer(function (request, response) {
      contract.get_perms(uid.toString(), f);
       break;
    
+    case '/getmaster':
+     contract.get_master(uid.toString(), f);
+      break;
+   
     default:
+      console.log('400:command does not exist');
       response.statusCode = 400;
       response.write("400".toString());
-      response.end();
+      //response.end();
   } //switch
  } //if GET ...else (POST ) ...?
 });

@@ -23,6 +23,7 @@ var deviceID
   , go_fwd = true
   , oldTime = Date.now()
   , master_uid = ''
+  , permissions = 0;
   ;
 
 function send_http_req(action, orig_uid, perms, cb) {
@@ -44,98 +45,55 @@ function send_http_req(action, orig_uid, perms, cb) {
   req.end();
 }
 
-function add_uid(uid, perms) {
-  //Add user to the blockchain using its uid and permissions
-  send_http_req("adduser", uid, perms, function(err, result) {;
-    if (!err) 
-        console.log("blockchain operation result:", result);
-    else {
-        console.log("blockchain error:", err);
-    }
-  });
-  fs.writeFile(auth_path+uid, perms, function (err) {
-    if (err) return console.log(err);
-    else console.log("Added UID:", uid);
-  });
-}
-
-function delete_uid(uid) {
-  send_http_req("deluser", uid, 0, function(err, result) {;
-    if (!err) 
-        console.log("blockchain operation result:", result);
-    else {
-        console.log("blockchain error:", err);
-    }
-  });
-  fs.unlink(auth_path+uid, function(err) {
-    if (err) return console.error(err);
-    else console.log("UID deleted:", uid);
-  }); 
-}
-
-function get_perms(uid)  {
-  console.log("Im in get_perms:", uid);
-  send_http_req("getperms", uid, 0, function(err, result) {;
-    if (!err) { 
-        console.log("blockchain operation result:", result);
-        return result;
-            
-    }
-    else {
-        console.log("blockchain error:", err);
-        return -1;
-    }
-  });
- 
-}
-
 function read(deviceID) {
 
   var nfcdev = new nfc.NFC();
-
   nfcdev.on('read', function(tag) {
-  var nowTime = Date.now();
+
+  var nowTime = Date.now()
+  , permissions =0;
+
   uid=tag.uid;
   //console.log("\n============CARD UID:", uid);
-  //console.log('old:',oldTime);
-  //console.log('now:',nowTime);
-  go_fwd = (nowTime > oldTime +5000); //wait 1 second to avoid double tap 
+  
+  go_fwd = (nowTime > oldTime + 2000); //wait 1 second to avoid double tap 
   if (go_fwd) {
     oldTime=nowTime;
-  //if (true) {
-    exists = (get_perms(uid) == 127);
-    //fs.exists(master_path+uid, function(exists) { //master card exists
-        if (exists) {
+    //console.log("First get permissions for:", uid);
+    send_http_req("getperms", uid, 0, function (err, result) { 
+        permissions = result;
+        //console.log("perms:", permissions);
+        if (permissions == 127) {
 	        master_uid=uid;
 	        program_mode=!program_mode;
             if (program_mode) {
-                m_uid= uid;
+                m_uid = uid;
 	   	    //Set led to yellow 
     	        console.log("Program mode enabled, Master:", uid);
 	        }
             else {
-                m_uid='';
+                m_uid = '';
 	   	    //Set led to blinking (normal mode)
     	        console.log("Program mode disabled, Master:", uid);
             }
 	    }
-    //});
     
-    if (program_mode && (uid != master_uid)){ 
-    //if (program_mode ){ 
-        var perms=1; //simple access
-        exists = (get_perms(uid) == 1); 
-        //fs.exists(auth_path+uid, function(exists) {
-            if (exists) delete_uid(uid)
-	        else add_uid(uid, perms);
-        //});
+        if (program_mode && (uid != master_uid)){ 
+            exists = (permissions == 1); 
+            if (exists) 
+                send_http_req("deluser", uid, 0, function (err, result) { 
+                //delete_uid(uid, function (result) {
+    	            console.log("UID deleted:", result);
+                });
+	        else //add_uid(uid, 1, function (result)
+                send_http_req("adduser", uid, 1, function (err, result) { 
+    	            console.log("UID added:", result);
+                });//1= basic access permissions
         
-    }
+        }
 
-    if (!program_mode) {
-        exists = (get_perms(uid) == 1); 
-        //fs.exists(auth_path+uid, function(exists) { //extend to include query to the blockchain
-            if (exists) {
+        if (!program_mode) {
+            if (permissions == 1) {
 	        //Set led to green and unlock
 	            console.log("Access granted to UID:", uid);	
 	        }
@@ -143,13 +101,12 @@ function read(deviceID) {
 	            console.log("Not valid for access UID:", uid);	
 	            //Set led to red
 	        }
-        //});
-    }
+        }
+    });
   }//only do all of the above if there is no double tap
   else { 
     //console.log("Ignoring consecutive tap for UID:", uid);
   } 
-  //uid=tag.uid;old_uid=uid;
 
   }); //end of read event
 
