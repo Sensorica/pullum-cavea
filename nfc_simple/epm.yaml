@@ -1,0 +1,7 @@
+jobs:
+
+    - name: nfc_simpleK
+      job:
+        deploy:
+          contract: nfc_simple.sol
+          wait: true
