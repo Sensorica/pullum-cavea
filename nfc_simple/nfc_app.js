@@ -7,12 +7,14 @@ var url = require('url')
 var address = require('./epm.json').nfc_simpleK;
 var abi = JSON.parse(fs.readFileSync('./abi/' + address, 'utf8'));
 var accounts = require('./accounts.json');
-var chainUrl;
-var manager;
-var contract;
-var server;
+var manager
+    , chainUrl
+    , contract
+    , server;
 
-chainUrl = 'http://10.0.20.99:1337/rpc';
+var myIP = '10.0.20.99';
+if (process.argv.length == 3) myIP = process.argv[2];
+chainUrl = 'http://' + myIP + ':1337/rpc';
 
 // Instantiate the contract object manager using the chain URL and the account
 // data.
@@ -83,6 +85,6 @@ server = http.createServer(function (request, response) {
 // Tell the server to listen to incoming requests on the port specified in the
 // environment.
 server.listen(8337, function () {
-  console.log('Listening for HTTP requests')
+  console.log('Listening for HTTP requests at ',  chainUrl)
 });
 

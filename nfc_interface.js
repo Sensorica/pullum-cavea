@@ -11,7 +11,7 @@ var http_options = { //put it in command line argsv
     port: 8337 // simulates blockchain rpc service port
 };
 
-if (process.argv[2] != "") http_options['host'] = process.argv[2];
+if (process.argv.length == 3) http_options['host'] = process.argv[2];
 
 var deviceID
   , auth_path = './auth_card/'
