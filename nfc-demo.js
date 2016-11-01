@@ -185,7 +185,7 @@ function led_off_t(t) {
 // Instantiate the contract object manager using the chain URL and the account
 // data.
 manager = contracts.newContractManagerDev(chainUrl,
-  accounts.demo_full_000);
+  accounts.demo_full_000);  //Account must be passed as argument, not being hardcoded
 // Instantiate the contract object using the ABI and the address.
 contract = manager.newContractFactory(abi).at(address);
 
