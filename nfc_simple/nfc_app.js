@@ -12,14 +12,15 @@ var manager
     , contract
     , server;
 
-var myIP = '10.0.20.99';
+//var myIP = '10.0.20.99';
+var myIP = '127.0.0.1';
 if (process.argv.length == 3) myIP = process.argv[2];
 chainUrl = 'http://' + myIP + ':1337/rpc';
 
 // Instantiate the contract object manager using the chain URL and the account
 // data.
 manager = contracts.newContractManagerDev(chainUrl,
-  accounts.chickencoop_full_000);
+  accounts.coop_full_000);
 
 // Instantiate the contract object using the ABI and the address.
 contract = manager.newContractFactory(abi).at(address);
@@ -85,6 +86,6 @@ server = http.createServer(function (request, response) {
 // Tell the server to listen to incoming requests on the port specified in the
 // environment.
 server.listen(8337, function () {
-  console.log('Listening for HTTP requests at ',  chainUrl)
+  console.log('Listening for HTTP requests at port 8337 for chain at ',  chainUrl)
 });
 
